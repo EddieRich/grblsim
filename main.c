@@ -3,10 +3,14 @@
 #include <string.h>
 #include <unistd.h>
 #include <getopt.h>
-#include "error.h"
+#include <linux/limits.h>
+#include <stdbool.h>
+#include "errors.h"
+#include "grbl.h"
 
 struct s_options
 {
+	int homing;
 	int verbose;
 } options = { 0 };
 
@@ -22,55 +26,53 @@ void show_usage(char* appname)
 		appname += 2;
 
 	printf("\nusage: %s [options]\noptions:\n", appname);
+	printf("  -h       enable homing\n");
 	printf("  -v       verbose, show lots of information\n");
 	printf("\n\n");
-	exit(EXIT_FAILURE);
 }
 
 int main(int argc, char* argv[])
 {
 	int opt;
 
-	while ((opt = getopt(argc, argv, "a:b::v")) != -1)
+	while ((opt = getopt(argc, argv, "hv")) != -1)
 	{
 		// ascii value of option letter
 		switch (opt)
 		{
-		case 'a':
-			// a has a mandatory value pointed to by optarg
-			// options.a = atoi(optarg);
-			break;
-
-		case 'b':
-			// b has an optional value pointed to by optarg
-			// options.b = b_default_value
-			// if (optarg != NULL)
-			//   options.b = atof(optarg);
+		case 'h':
+			options.homing = true;
 			break;
 
 		case 'v':
-			// v is a flag
-			options.verbose = 1;
+			options.verbose = true;
 			break;
 
 		default:
-			// unknown option
+		// unknown option
 			show_usage(argv[0]);
+			exit(E_FAILURE);
 		}
 	}
+
 
 	// argc and argv have been modified
 	// if a filename (for example) should have been specified but wasn't,
 	// optind will = argc, show the error
-	if (optind >= argc)
-	{
-		show_error(E_FILE_NOT_SPECIFIED);
-		show_usage(argv[0]);
-	}
-
+	//if (optind >= argc)
+	//{
+	//	show_usage(argv[0]);
+	//	show_error(E_EXTRA_ARGS);
+	//}
 	// filename is *argv[optind]
 
 
-	exit(EXIT_SUCCESS);
+	if (grbl_init(options.verbose) == E_SUCCESS)
+	{
+		grbl_homing(options.verbose, options.homing);
+		grbl_run(options.verbose);
+	}
+
+	exit(E_SUCCESS);
 }
 
